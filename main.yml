@@ -1,0 +1,66 @@
+name: CI/CD → AKS (ACR build & deploy)
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  IMAGE_NAME: taskflow
+  K8S_MANIFEST_DIR: infra/ansible/k8s
+  RESOURCE_GROUP: devopsproject
+  AKS_NAME: aks-taskflow
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Vite site
+        run: |
+          npm ci
+          npm run build
+
+      - name: Azure Login (Service Principal)
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Determine ACR login server
+        id: acr
+        run: |
+          echo "ACR_LOGIN_SERVER=$(az acr show -n ${{ secrets.ACR_NAME }} --query loginServer -o tsv)" >> $GITHUB_ENV
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AKS_NAME }} --overwrite-existing
+
+      - name: Deploy to AKS
+        run: |
+          sed -e "s|REPLACE_IMAGE|${IMAGE}|g" ${K8S_MANIFEST_DIR}/deployment.yaml > ${K8S_MANIFEST_DIR}/_tmp_deployment.yaml
+          kubectl apply -f ${K8S_MANIFEST_DIR}/_tmp_deployment.yaml
+          kubectl apply -f ${K8S_MANIFEST_DIR}/service.yaml
+          kubectl rollout status deployment/taskflow --timeout=120s
+
+      - name: Show deployed service info
+        run: kubectl get svc taskflow-service -o wide
