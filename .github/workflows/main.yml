@@ -60,7 +60,7 @@ jobs:
           sed -e "s|REPLACE_IMAGE|${IMAGE}|g" ${K8S_MANIFEST_DIR}/deployment.yaml > ${K8S_MANIFEST_DIR}/_tmp_deployment.yaml
           kubectl apply -f ${K8S_MANIFEST_DIR}/_tmp_deployment.yaml
           kubectl apply -f ${K8S_MANIFEST_DIR}/service.yaml
-          kubectl rollout status deployment/taskflow --timeout=120s
+          kubectl rollout status deployment/taskflow-deployment --timeout=120s
 
       - name: Show deployed service info
         run: kubectl get svc taskflow-service -o wide
