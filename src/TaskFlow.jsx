@@ -140,7 +140,7 @@ const TaskFlow = () => {
   const filteredTasks = getFilteredTasks();
   const analytics = getAnalytics();
 
-  const COLORS = ['#ef4444', '#f59e0b', '#3b82f6'];
+  const COLORS = ['#ef4444', '#b17b1cff', '#3b82f6'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -156,7 +156,7 @@ const TaskFlow = () => {
               <Target className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-pink-200 to-purple-200">
-              TaskFlow
+              TaskFlow App
             </h1>
           </div>
           <p className="text-purple-200 text-lg">Master your day, one task at a time</p>
